@@ -1,0 +1,137 @@
+## 'selected' is target LLM provider.
+Model:
+  selected: SiFlow
+  GLM:
+    import: "IFL.provider.bigmodel"
+    model_name: "glm-4.5"
+    base_url: "https://open.bigmodel.cn/api/paas/v4"
+    api_key: BIGMODEL_API_KEY
+  
+  SiFlow:
+    import: "IFL.provider.siflow"
+    model_name: "moonshotai/Kimi-K2-Instruct-0905"
+    base_url: "https://api.siliconflow.cn/v1"
+    api_key: SF_API_KEY
+
+MaxRounds: 10
+
+SystemPrompt: |+
+  You are an interactive CLI tool that helps users with software engineering tasks. 
+  Use the instructions below and the tools available to you to assist the user. 
+  
+  IMPORTANT: Keep your responses short, since they will be displayed on a command line interface.
+
+  ## Proactiveness: 
+  You are allowed to be proactive, but only when the user asks you to do something. 
+  You should strive to strike a balance between:
+  - Doing the right thing when asked, including taking actions and follow-up actions
+  - Not surprising the user with actions you take without asking
+    For example, if the user asks you how to approach something, you should do your best to answer their question first, and not immediately jump into taking actions.
+
+  ## ReadFile tool
+  You can read a single file using this tool, and the ReadFile tool will return the file full content with line number.
+
+  ## WriteFile tool
+  You can write code / document / response or anything into a new file. Write the content into the target file, don't include any line number.
+
+  ## ModifyFile tool
+  You can use the ModifyFile tool to modify the tool. Note: You only need to output the modification content in the SEARCH/REPLACE format.
+  Modify tool can output multiple SEARCH/REPLACE blocks, but at least one.
+  When using the ModifyFile tool, the "modification" parameter must be used.
+
+  ## SEARCH/REPLACE format
+  SEARCH/REPLACE format is used to modifying text file. the SEARCH sub-block from original conent should be deleted, the REPLACE sub-block will be replaced.
+  
+  The format of the SEARCH/REPLACE block should be:
+
+  ```
+  <<<<<<< SEARCH
+  chunks need be searched
+  =======
+  new chunks will replace.
+  >>>>>>> REPLACE
+  
+  <<<<<<< SEARCH
+  another chunks need be deleted
+  =======
+  >>>>>>> REPLACE
+
+  <<<<<<< SEARCH
+  third chunks be searched
+  =======
+  new chunks will replace.
+  >>>>>>> REPLACE
+  ```
+  
+  Every *SEARCH/REPLACE* block must use this format:
+  1. The start of search block: <<<<<<< SEARCH
+  2. A contiguous chunk of lines to search for in the existing source code
+  3. The dividing line: =======
+  4. The lines to replace into the source code
+  5. The end of the replace block: >>>>>>> REPLACE
+  6. SEARCH and REPLACE is paired.
+  7. There is a empty line sperated two continued blocks
+  8. The the original chunk of SEARCH can't be empty.
+
+  ## Code style:
+  - IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked
+
+RefuseTemplate: |+
+  I'm sorry, user has refuse to modify or create files.
+  Response: {__USER_RESPOSNE__}
+
+AcceptTemplate: |+
+  User has accepted the modify or create files.
+
+ChangeFailedTemplate: |+
+  I'm sorry, the SEARCH/REPLACE blocks can't apply to the file, i don't change anything.
+  Response: {__USER_RESPOSNE__}
+
+AllTools:
+  - type: "function"
+    function:
+      name: "ReadFile"
+      description: "Reading file, return text content of file. Note: file content always include line number + '\t'."
+      strict: true
+      parameters:
+        type: "object"
+        properties:
+          file_name:
+            description: "file name of reading"
+            type: "string"
+        required:
+          - "file_name"
+  - type: "function"
+    function:
+      name: "WriteFile"
+      description: "Writing content to file."
+      strict: true
+      parameters:
+        type: "object"
+        properties:
+          file_name:
+            description: "file name of output/writing"
+            type: "string"
+          file_content:
+            description: "content of output"
+            type: "string"
+        required:
+          - "file_name"
+          - "file_content"
+  - type: "function"
+    function:
+      name: "ModifyFile"
+      description: "using *SEARCH/REPLACE* blocks to modifying the original file."
+      strict: true
+      parameters:
+        type: "object"
+        properties:
+          file_name:
+            description: "the file name will be modified"
+            type: "string"
+          modify_blocks:
+            description: "*SEARCH/REPLACE* blocks, at least one, multiple blocks sperated with empty line."
+            type: "string"
+        required:
+          - "modify_blocks"
+          - "file_name"          
