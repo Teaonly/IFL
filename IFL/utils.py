@@ -14,10 +14,9 @@ def content_from_input(info):
     while True:
         try:
             content = prompt(">>", multiline=True, style=style, show_frame=True)
-            break
+            return content
         except EOFError:
-            continue
-    return content
+            return ""
 
 def confirm_from_input(info, byExit = True):
     style = Style.from_dict({

@@ -280,6 +280,7 @@ def get_args_from_command():
     parser = argparse.ArgumentParser(description="ifl(I'm Feeling Lucky) - Command line coding agent")
     parser.add_argument('-i', '--inputs', nargs='*', default=[], help='Input files')
     parser.add_argument('-t', '--task', type=str, help='Task description')
+    parser.add_argument('-m', '--model', type=str, help='Model provider (GLM/SiFlow)')
 
     args = parser.parse_args()
     return args
@@ -301,9 +302,18 @@ def main():
         with open(lore_path, "r") as file:
             config = yaml.safe_load(file)
 
-        agent = IFL(config)
-
         args = get_args_from_command()
+        
+        ## 如果指定了模型供应商，更新配置
+        if args.model:
+            if args.model in config["Model"] :
+                config["Model"]["selected"] = args.model
+            else:
+                print(f"Invalid model provider: {args.model}")
+                print(f"Available providers: {[k for k in config['Model'].keys() if k != 'selected']}")
+                sys.exit(1)
+        
+        agent = IFL(config)
         
         if args.task and args.task.strip() != "":
             task = args.task
