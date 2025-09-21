@@ -1,5 +1,5 @@
 import unittest
-from utils import do_search_replace 
+from IFL.utils import do_search_replace
 
 class TestSearchReplace(unittest.TestCase):
     def test_do_search_replace_single_block(self):
