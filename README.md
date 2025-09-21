@@ -72,9 +72,10 @@ pip install -e .
 ## 命令行参数
 
 ```
-ifl [-h] [-t TASK] [-i INPUTS [INPUTS ...]]
+ifl [-h] [-m model] [-t TASK] [-i INPUTS [INPUTS ...]]
 
 选项：
+  -m, --model    选择使用 LLM 模型来驱动
   -t, --task     任务描述，省略则进入交互式输入
   -i, --inputs   需要提前读入的文件列表，可多次指定
 ```

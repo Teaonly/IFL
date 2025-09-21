@@ -1,6 +1,6 @@
 ## 'selected' is target LLM provider.
 Model:
-  selected: GLM 
+  selected: SiFlow 
   GLM:
     import: "IFL.provider.bigmodel"
     model_name: "glm-4.5"
@@ -84,7 +84,7 @@ AcceptTemplate: |+
   User has accepted the modify or create files.
 
 ChangeFailedTemplate: |+
-  I'm sorry, the SEARCH/REPLACE blocks can't apply to the file, i don't change anything.
+  I'm sorry, the SEARCH/REPLACE blocks can't apply to the file, i didn't change anything.
   Response: {__USER_RESPOSNE__}
 
 AllTools:
