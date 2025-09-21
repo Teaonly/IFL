@@ -55,13 +55,16 @@ def print_warning(info):
     print_formatted_text(HTML(f'<ansired>{info}</ansired>'))
 
 
-def readfile_with_linenumber(file_path):
+def readfile_with_linenumber(file_path, with_number=True):
     with open(file_path, 'r', encoding='utf-8') as file:
         lines = file.readlines()
 
     result = []
     for i, line in enumerate(lines, 1):
-        result.append(f"{i}\t{line}")
+        if with_number:
+            result.append(f"{i}\t{line}")
+        else:
+            result.append(line)
 
     return ''.join(result)
 

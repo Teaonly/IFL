@@ -61,7 +61,7 @@ class IFL(ABC):
             })
             
             ## 模拟 function call 的结果
-            file_content = readfile_with_linenumber(infile)
+            file_content = readfile_with_linenumber(infile, False)
             call_result = {
                 'role' : 'tool',
                 'tool_call_id': callid,
@@ -289,7 +289,7 @@ def signal_handler(sig, frame):
     print("\nInterrupt signal received, program exiting...")
     sys.exit(0)
 
-def main():    
+def main_ifl():    
     signal.signal(signal.SIGINT, signal_handler)
     
     try:
@@ -330,6 +330,3 @@ def main():
     except Exception as e:
         print(f"Program execution error: {e}")
         sys.exit(1)
-
-if __name__ == "__main__":
-    main()

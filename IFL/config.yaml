@@ -1,6 +1,6 @@
 ## 'selected' is target LLM provider.
 Model:
-  selected: SiFlow
+  selected: SiFlow 
   GLM:
     import: "IFL.provider.bigmodel"
     model_name: "glm-4.5"

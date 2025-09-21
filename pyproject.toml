@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ifl = "IFL.main:main"
+ifl = "IFL.main:main_ifl"
 
 [build-system]
 requires = ["setuptools"]
