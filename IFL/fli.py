@@ -22,7 +22,7 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
 
     try:
-        ## 加载环境变量
+        # Load environment variables
         load_dotenv()
 
     except KeyboardInterrupt:

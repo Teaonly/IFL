@@ -61,7 +61,7 @@ class IFL(ABC):
             })
 
             ## 模拟 function call 的结果
-            file_content = readfile_with_linenumber(infile, False)
+            file_content = readfile_with_linenumber(infile, True)
             call_result = {
                 'role' : 'tool',
                 'tool_call_id': callid,
@@ -265,7 +265,7 @@ class IFL(ABC):
             print(f"Cannot open file: {file_name}, exiting")
             sys.exit(0)
 
-        response = readfile_with_linenumber(file_name)
+        response = readfile_with_linenumber(file_name, True)
         call_result = {
             'role' : 'tool',
             'tool_call_id': callid,
