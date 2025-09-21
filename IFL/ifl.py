@@ -10,7 +10,7 @@ import argparse
 from dotenv import load_dotenv
 
 from IFL.provider.modules_factory import create_provider
-from IFL.utils import ( apply_patch, readfile_with_linenumber, content_from_input, 
+from IFL.utils import ( apply_patch, readfile_with_linenumber, content_from_input,
                            print_tag, print_line, print_tag_end, print_warning,
                            confirm_from_input, display_search_replace )
 
@@ -28,7 +28,7 @@ class IFL(ABC):
         allMessages = [
             {
                 'role': "system",
-                'content': self.config["SystemPrompt"] 
+                'content': self.config["SystemPrompt"]
             },
             {
                 'role': "user",
@@ -40,13 +40,13 @@ class IFL(ABC):
         for infile in inputs:
             if not os.path.exists(infile):
                 raise Exception(f"Cannot open file: {infile}")
-            
+
             argument = {
                 "file_name" : infile
             }
             callid = str(uuid.uuid4())[:6]
             fcall = {
-                "type": "function", 
+                "type": "function",
                 "id":  callid,
                 "function": {
                     "name": "ReadFile",
@@ -59,7 +59,7 @@ class IFL(ABC):
                 'content': None,
                 'tool_calls': [fcall]
             })
-            
+
             ## 模拟 function call 的结果
             file_content = readfile_with_linenumber(infile, False)
             call_result = {
@@ -71,16 +71,16 @@ class IFL(ABC):
 
         ## 消息已经准备完成
         self.chat_loop(allMessages)
-        
+
 
     def chat_loop(self, allMessages):
         self.current_round += 1
         print_line(f"Calling LLM (round {self.current_round})")
-        
+
         if self.current_round > self.max_rounds:
             print(f"Maximum rounds {self.max_rounds} reached, exiting")
             sys.exit(0)
-            
+
         thinking, talking, fcall = self.llm.response(allMessages, self.tools)
 
         new_message = {
@@ -89,7 +89,7 @@ class IFL(ABC):
             'reasoning_content': thinking,
             'tool_calls': [fcall] if fcall is not None else None
         }
-        
+
         ## 显示LLM响应消息
         if thinking is not None and thinking.strip() != "":
             print_tag('==Thinking==')
@@ -100,7 +100,7 @@ class IFL(ABC):
             print_tag('==Answer==')
             print(talking)
             print_tag_end()
-        
+
         ## 如果没有工具调用
         if fcall is None:
             confirm = confirm_from_input(f"Model did not invoke tool call, exit? (y/n)", False)
@@ -136,14 +136,14 @@ class IFL(ABC):
     def handle_modify_file(self, fcall, new_message, allMessages):
         try:
             callid = fcall["id"]
-            arguments = fcall["function"]["arguments"]            
+            arguments = fcall["function"]["arguments"]
             arguments = json.loads(arguments)
             blocks = arguments["modify_blocks"]
             file_name = arguments["file_name"]
 
         except Exception as e:
             print_warning(f'Parse tool call error: {e}, retrying')
-            response = f"parse tool error : {str(e)}"            
+            response = f"parse tool error : {str(e)}"
             call_result = {
                 'role' : 'tool',
                 'tool_call_id': callid,
@@ -152,11 +152,11 @@ class IFL(ABC):
             allMessages.append(new_message)
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
-                            
+
         print_tag(f'==Tool (ModifyFile): {file_name}==')
         print(display_search_replace(blocks))
         print_tag_end()
-        
+
         confirm = confirm_from_input(f"Confirm modification of {file_name}? (y/n)")
         if confirm == True:
             ## 根据获得 path/diff 字符串，修改目标文件
@@ -192,14 +192,14 @@ class IFL(ABC):
     def handle_write_file(self, fcall, new_message, allMessages):
         try:
             callid = fcall["id"]
-            arguments = fcall["function"]["arguments"]            
+            arguments = fcall["function"]["arguments"]
             arguments = json.loads(arguments)
             file_content = arguments["file_content"]
             file_name = arguments['file_name']
 
         except Exception as e:
             print_warning(f'Parse call error: {e}, retrying')
-            response = f"Parse tool call error: {str(e)}"            
+            response = f"Parse tool call error: {str(e)}"
             call_result = {
                 'role' : 'tool',
                 'tool_call_id': callid,
@@ -208,7 +208,7 @@ class IFL(ABC):
             allMessages.append(new_message)
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
-        
+
         print_tag(f'==Tool (WriteFile): {file_name}==')
         print(file_content)
         print_tag_end()
@@ -241,13 +241,13 @@ class IFL(ABC):
 
     def handle_read_file(self, fcall, new_message, allMessages):
         try:
-            callid = fcall["id"]                
-            arguments = fcall["function"]["arguments"]            
+            callid = fcall["id"]
+            arguments = fcall["function"]["arguments"]
             arguments = json.loads(arguments)
             file_name = arguments["file_name"]
         except Exception as e:
             print_warning(f'Parse tool call error: {e}, retrying')
-            response = f"parse tool error : {str(e)}"            
+            response = f"parse tool error : {str(e)}"
             call_result = {
                 'role' : 'tool',
                 'tool_call_id': callid,
@@ -256,15 +256,15 @@ class IFL(ABC):
             allMessages.append(new_message)
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
-        
+
         print_tag(f'==Tool (ReadFile): {file_name}==')
         print_tag_end()
-        
+
         # 确保文件存在
         if not os.path.exists(file_name):
             print(f"Cannot open file: {file_name}, exiting")
             sys.exit(0)
-        
+
         response = readfile_with_linenumber(file_name)
         call_result = {
             'role' : 'tool',
@@ -289,13 +289,13 @@ def signal_handler(sig, frame):
     print("\nInterrupt signal received, program exiting...")
     sys.exit(0)
 
-def main_ifl():    
+def main():
     signal.signal(signal.SIGINT, signal_handler)
-    
+
     try:
         ## 加载环境变量
         load_dotenv()
-        
+
         ## 加载配置文件
         code_path = os.path.dirname( os.path.abspath(__file__) )
         lore_path = os.path.join(code_path, "config.yaml")
@@ -303,7 +303,7 @@ def main_ifl():
             config = yaml.safe_load(file)
 
         args = get_args_from_command()
-        
+
         ## 如果指定了模型供应商，更新配置
         if args.model:
             if args.model in config["Model"] :
@@ -312,9 +312,9 @@ def main_ifl():
                 print(f"Invalid model provider: {args.model}")
                 print(f"Available providers: {[k for k in config['Model'].keys() if k != 'selected']}")
                 sys.exit(1)
-        
+
         agent = IFL(config)
-        
+
         if args.task and args.task.strip() != "":
             task = args.task
         else:
