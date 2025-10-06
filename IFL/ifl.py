@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from IFL.provider.modules_factory import create_provider
 from IFL.utils import ( apply_patch, readfile_with_linenumber, content_from_input,
-                           print_tag, print_line, print_tag_end, print_warning,
+                           print_line, framed_print,
                            confirm_from_input, display_search_replace )
 
 class IFL(ABC):
@@ -92,14 +92,10 @@ class IFL(ABC):
 
         ## 显示LLM响应消息
         if thinking is not None and thinking.strip() != "":
-            print_tag('==Thinking==')
-            print(thinking)
-            print_tag_end()
+            framed_print("思考", thinking, "info")
 
         if talking is not None and talking.strip() != "":
-            print_tag('==Answer==')
-            print(talking)
-            print_tag_end()
+            framed_print("回答", talking, "info")
 
         ## 如果没有工具调用
         if fcall is None:
@@ -142,7 +138,7 @@ class IFL(ABC):
             file_name = arguments["file_name"]
 
         except Exception as e:
-            print_warning(f'Parse tool call error: {e}, retrying')
+            framed_print("ModifyFile 解析出错!", f'{e}\nRetrying...', "warning")
             response = f"parse tool error : {str(e)}"
             call_result = {
                 'role' : 'tool',
@@ -153,9 +149,7 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        print_tag(f'==Tool (ModifyFile): {file_name}==')
-        print(display_search_replace(blocks))
-        print_tag_end()
+        framed_print("调用 Tool (ModifyFile)", display_search_replace(blocks), "success")
 
         confirm = confirm_from_input(f"Confirm modification of {file_name}? (y/n)")
         if confirm == True:
@@ -166,7 +160,7 @@ class IFL(ABC):
             else:
                 response = self.config["ChangeFailedTemplate"]
                 response = response.replace("{__USER_RESPOSNE__}", msg)
-                print_warning(f'Execution failed, error feedback: {msg}')
+                framed_print("ModifyFile 执行出错!", f'{msg}', "warning")
 
             call_result = {
                 'role' : 'tool',
@@ -198,7 +192,7 @@ class IFL(ABC):
             file_name = arguments['file_name']
 
         except Exception as e:
-            print_warning(f'Parse call error: {e}, retrying')
+            framed_print("Writefile 解析出错!", f'{e}\nRetrying...', "warning")
             response = f"Parse tool call error: {str(e)}"
             call_result = {
                 'role' : 'tool',
@@ -209,9 +203,7 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        print_tag(f'==Tool (WriteFile): {file_name}==')
-        print(file_content)
-        print_tag_end()
+        framed_print("Tool (WriteFile)", file_content, "success")
 
         confirm = confirm_from_input(f"Confirm writing file {file_name}? (y/n)")
         if confirm == True:
@@ -246,7 +238,8 @@ class IFL(ABC):
             arguments = json.loads(arguments)
             file_name = arguments["file_name"]
         except Exception as e:
-            print_warning(f'Parse tool call error: {e}, retrying')
+            framed_print("Readfile 解析出错!", f'{e}\nRetrying...', "warning")
+
             response = f"parse tool error : {str(e)}"
             call_result = {
                 'role' : 'tool',
@@ -257,8 +250,7 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        print_tag(f'==Tool (ReadFile): {file_name}==')
-        print_tag_end()
+        framed_print("Tool (ReadFile)", f"文件名：{file_name}", "success")
 
         # 确保文件存在
         if not os.path.exists(file_name):
@@ -280,7 +272,7 @@ def get_args_from_command():
     parser = argparse.ArgumentParser(description="ifl(I'm Feeling Lucky) - Command line coding agent")
     parser.add_argument('-i', '--inputs', nargs='*', default=[], help='Input files')
     parser.add_argument('-t', '--task', type=str, help='Task description')
-    parser.add_argument('-m', '--model', type=str, help='Model provider (GLM/SiFlow)')
+    parser.add_argument('-m', '--model', type=str, help='Model provider (SiFlow/GLM)')
 
     args = parser.parse_args()
     return args

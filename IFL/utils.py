@@ -5,6 +5,8 @@ import html
 from prompt_toolkit import prompt, print_formatted_text, HTML
 from prompt_toolkit.styles import Style
 from prompt_toolkit.shortcuts import choice
+import shutil
+import wcwidth
 
 def content_from_input(info):
     style = Style.from_dict({
@@ -45,15 +47,62 @@ def print_line(info, color="ansigreen"):
     print("\n")
     print_formatted_text(HTML(f'<{color}>{"-"*20}{info}{"-"*20}</{color}>'))
 
-def print_tag(info, color="ansicyan"):
-    print_formatted_text(HTML(f'<{color}>{info}</{color}>'))
+def printed_length(s):
+    length = 0
+    for char in s:
+        width = wcwidth.wcwidth(char)
+        if width > 0:  # Exclude zero-width characters
+            length += width
+    return length
+    
+def framed_print(title, content, style="default"):
+    """Print content in a styled frame, allowing overflow beyond terminal height"""
+    lines = content.split('\n')
+    frame_width = shutil.get_terminal_size().columns
 
-def print_tag_end(color="ansicyan"):
-    print_formatted_text(HTML(f'<{color}>{"-"*20}</{color}>'))
+    # Define ANSI color codes
+    colors = {
+        "default": {"frame": "\033[90m", "title": "\033[1m", "reset": "\033[0m"},
+        "info": {"frame": "\033[94m", "title": "\033[1;94m", "reset": "\033[0m"},
+        "warning": {"frame": "\033[93m", "title": "\033[1;93m", "reset": "\033[0m"},
+        "error": {"frame": "\033[91m", "title": "\033[1;91m", "reset": "\033[0m"},
+        "success": {"frame": "\033[92m", "title": "\033[1;92m", "reset": "\033[0m"}
+    }
 
-def print_warning(info):
-    print_formatted_text(HTML(f'<ansired>{info}</ansired>'))
+    color = colors.get(style, colors["default"])
 
+    # Draw top border with title
+    top_border_with_title = f"┌───── {title} "  
+    top_border_with_title += "─" * (frame_width - printed_length(top_border_with_title) - 1)
+    top_border_with_title += "┐"
+
+    # Print frame
+    print(f"{color['frame']}{''.join(top_border_with_title)}{color['reset']}")
+
+    # Print content lines
+    for line in lines:
+        # Truncate line if it's too long based on display width
+        display_width = frame_width - 4  # 2 spaces on each side
+
+        # Calculate actual display width and truncate accordingly
+        current_width = 0
+        truncated_line = ""
+        for char in line:
+            char_width = wcwidth.wcwidth(char)
+            if current_width + char_width <= display_width:
+                truncated_line += char
+                current_width += char_width
+            else:
+                break
+
+        while current_width < display_width:
+            truncated_line += " "
+            current_width += 1
+
+        print(f"{color['frame']}│ {truncated_line} │{color['reset']}")
+
+    # Print bottom border
+    print(f"{color['frame']}└" + "─" * (frame_width - 2) + f"┘{color['reset']}")
 
 def readfile_with_linenumber(file_path, with_number=True):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -109,7 +158,7 @@ def do_search_replace(original, blocks):
         search_start = find_next(blocks_lines, i, "<<<<<<< SEARCH")
         if search_start == -1:
             return False, "Malformed block: missing <<<<<<< SEARCH"
-        
+
         # 找到 SEARCH 块的起始位置
         search_start = search_start + 1
         search_end = find_next(blocks_lines, search_start, "=======")
@@ -120,7 +169,7 @@ def do_search_replace(original, blocks):
         replace_end = find_next(blocks_lines, search_end + 1, ">>>>>>> REPLACE")
         if replace_end == -1:
             return False, "Malformed block: missing >>>>>>> REPLACE"
-        
+
         search_lines = blocks_lines[search_start:search_end]
         replace_lines = blocks_lines[search_end + 1:replace_end]
 
@@ -145,7 +194,7 @@ def display_search_replace(blocks):
     output_lines = []
     in_search = False
     in_replace = False
-    
+
     for line in lines:
         if line.startswith("<<<<<<< SEARCH"):
             output_lines.append(f"\033[91m{line.rstrip()}\033[0m")  # 红色
@@ -165,7 +214,7 @@ def display_search_replace(blocks):
             output_lines.append(f"\033[92m+{line.rstrip()}\033[0m")  # 绿色添加线
         else:
             output_lines.append(line.rstrip())
-    
+
     return '\n'.join(output_lines)
 
 def apply_patch(file_path, blocks):
