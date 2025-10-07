@@ -9,8 +9,8 @@ Model:
   
   SiFlow:
     import: "IFL.provider.siflow"
-    ##model_name: "moonshotai/Kimi-K2-Instruct-0905"
-    model_name: "Qwen/Qwen3-Coder-480B-A35B-Instruct"
+    model_name: "moonshotai/Kimi-K2-Instruct-0905"
+    ##model_name: "Qwen/Qwen3-Coder-480B-A35B-Instruct"
     base_url: "https://api.siliconflow.cn/v1"
     api_key: SF_API_KEY
 
@@ -31,6 +31,7 @@ SystemPrompt: |+
 
   ## ReadFile tool
   You can read a single file using this tool, and the ReadFile tool will return the file full content.
+  Sometimes user will give some code snippet using this tool implicitly.
 
   ## WriteFile tool
   You can write code / document / response or anything into a new file. Write the content into the target file, don't include any line number.

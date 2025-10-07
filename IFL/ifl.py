@@ -14,12 +14,13 @@ from IFL.utils import ( apply_patch, readfile_with_linenumber, content_from_inpu
                         lined_print, framed_print, confirm_from_input )
 
 class IFL(ABC):
-    def __init__(self, config):
+    def __init__(self, config, auto_yes=False):
         self.config = config
         self.current_round = 0
         self.max_rounds = config.get("MaxRounds", 10)
         self.tools = config["AllTools"]
         self.llm = create_provider(config)
+        self.auto_yes = auto_yes
 
     ## 钳工操作，意味着精细、半自动操作
     def fitter(self, task, inputs):
@@ -98,7 +99,10 @@ class IFL(ABC):
 
         ## 如果没有工具调用
         if fcall is None:
-            confirm = confirm_from_input(f"Model did not invoke tool call, exit? (y/n)", False)
+            if not self.auto_yes:
+                confirm = confirm_from_input(f"Model did not invoke tool call, exit? (y/n)", False)
+            else:
+                confirm = True
             if confirm:
                 sys.exit(0)
                 return
@@ -148,9 +152,12 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        framed_print("Tool (ModifyFile)", blocks, "success")
+        framed_print(f"Tool (ModifyFile):{file_name}", blocks, "success")
 
-        confirm = confirm_from_input(f"Confirm modification of {file_name}? (y/n)")
+        if not self.auto_yes:
+            confirm = confirm_from_input(f"Confirm modification of {file_name}? (y/n)")
+        else:
+            confirm = True
         if confirm == True:
             ## 根据获得 path/diff 字符串，修改目标文件
             success, msg = apply_patch(file_name, blocks)
@@ -204,7 +211,10 @@ class IFL(ABC):
 
         framed_print(f"Tool (WriteFile):{file_name}", file_content, "success")
 
-        confirm = confirm_from_input(f"Confirm writing file {file_name}? (y/n)")
+        if not self.auto_yes:
+            confirm = confirm_from_input(f"Confirm writing file {file_name}? (y/n)")
+        else:
+            confirm = True
         if confirm == True:
             with open(file_name, 'w', encoding='utf-8') as f:
                 f.write(file_content)
@@ -272,6 +282,7 @@ def get_args_from_command():
     parser.add_argument('-i', '--inputs', nargs='*', default=[], help='Input files')
     parser.add_argument('-t', '--task', type=str, help='Task description')
     parser.add_argument('-m', '--model', type=str, help='Model provider (SiFlow/GLM)')
+    parser.add_argument('-y', '--yes', action='store_true', help='Default yes to all confirmations')
 
     args = parser.parse_args()
     return args
@@ -304,7 +315,7 @@ def main():
                 print(f"Available providers: {[k for k in config['Model'].keys() if k != 'selected']}")
                 sys.exit(1)
 
-        agent = IFL(config)
+        agent = IFL(config, auto_yes=args.yes)
 
         if args.task and args.task.strip() != "":
             task = args.task

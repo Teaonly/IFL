@@ -1,88 +1,39 @@
-# IFL(I'am Feeling Lucky!)
+# IFL – 命令行编码助手
 
-IFL(I'am Feeling Lucky!) 是一个轻量级、命令行驱动的编码智能体，专为“精密加工”代码场景设计。它通过本地 CLI 与 LLM 配合，半自动完成读取、修改、生成文件等操作，并让用户在每次关键动作前确认，兼顾效率与安全。
+本地 CLI + LLM，半自动读、改、写文件，每一步可确认。
 
 ## 安装
 
 ```bash
-# 克隆仓库
-git clone https://github.com/teaonly/IFL.git
-cd IFL
-
-# 创建虚拟环境（推荐 Python 3.12）
-python -m venv .venv
-source .venv/bin/activate  # Windows 请用 .venv\Scripts\activate
-
-# 安装依赖
+git clone https://github.com/teaonly/IFL.git && cd IFL
+python -m venv .venv && source .venv/bin/activate
 pip install -e .
 ```
 
-## 快速开始
+## 使用
 
-1. 把 LLM 的 API Key 写入环境变量：
-   ```bash
-   export SF_API_KEY="your-siliconflow-key"   # 使用 SiliconFlow
-   # 或
-   export BIGMODEL_API_KEY="your-glm-key"     # 使用 GLM
-   ```
+```bash
+export SF_API_KEY=xxx               # SiliconFlow
+# 或
+export BIGMODEL_API_KEY=xxx         # GLM
 
-2. 运行示例（修改单个文件）：
-   ```bash
-   ifl -t "把 utils.py 里的所有 print 改为 loguru logger" -i utils.py
-   ```
-
-
-3. 运行示例（读取多个文件后生成新文件）：
-   ```bash
-   ifl -t "根据 a.py 和 b.py 生成单元测试，保存为 test_ab.py" -i a.py -i b.py
-   ```
-
-4. 交互模式（未提供 `-t` 时自动进入）：
-   ```bash
-   ifl
-   ```
-
-运行截图：
-
-* 快问快答
-![case1](assets/case1.png)
-
-* 修改文件
-![case2](assets/case2.png)
-
-* 生成文件
-![case3](assets/case3.png)
-
-
-## 配置说明
-
-`IFL/config.yaml` 里可调整：
-- `Model.selected`：切换 LLM 提供商
-- `MaxRounds`：最大对话轮数（默认 10）
-- `SystemPrompt`：系统提示词，可自定义工具描述与代码风格
-- `AcceptTemplate / RefuseTemplate / ChangeFailedTemplate`：三种交互反馈模板
-
-## 命令行参数
-
-```
-ifl [-h] [-m model] [-t TASK] [-i INPUTS [INPUTS ...]]
-
-选项：
-  -m, --model    选择使用 LLM 模型来驱动
-  -t, --task     任务描述，省略则进入交互式输入
-  -i, --inputs   需要提前读入的文件列表，可多次指定
+ifl -t "任务描述" -i 文件1 -i 文件2   # 非交互
+ifl                                  # 交互模式
 ```
 
-## 典型工作流
+## 参数
 
-1. 用户输入任务 → 2. LLM 规划步骤 → 3. 工具调用（读/写/改） → 4. 终端打印 diff/内容 → 5. 用户确认或反馈 → 6. 回到 2. 直到任务完成
+- `-t` 任务描述（省略则交互输入）
+- `-i` 预读文件，可多次
+- `-m` 指定模型提供商 SiFlow/GLM
+- `-y` 默认全部确认
 
-## 安全与免责声明
+## 配置
 
-- 每次写盘前都会询问确认，防止误操作
-- 建议在 Git 仓库内使用，可快速回滚
-- 本项目仅提供智能体运行流程，生成内容均由所选 LLM 返回，请自行审查
+`IFL/config.yaml` 可调模型、轮数、提示词等。
 
-## License
+## 安全
+
+写盘前询问；建议在 Git 仓库内使用。
 
 MIT

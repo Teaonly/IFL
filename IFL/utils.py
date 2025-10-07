@@ -43,8 +43,6 @@ def confirm_from_input(info, byExit = True):
 
     return result
 
-
-
 def printed_length(s):
     length = 0
     for char in s:
@@ -62,7 +60,7 @@ def lined_print(info ):
     if printed_length(line) < terminal_width:
         line += '─'
     print("\n\n")
-    
+
     print(f"\033[90m{line}\033[0m")
 
 def framed_print(title, content, style="default"):
