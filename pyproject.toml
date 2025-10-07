@@ -14,8 +14,6 @@ dependencies = [
 
 [project.scripts]
 ifl = "IFL.ifl:main"
-sxz = "IFL.ifl:main"
-
 
 [build-system]
 requires = ["setuptools"]

@@ -11,8 +11,7 @@ from dotenv import load_dotenv
 
 from IFL.provider.modules_factory import create_provider
 from IFL.utils import ( apply_patch, readfile_with_linenumber, content_from_input,
-                           print_line, framed_print,
-                           confirm_from_input, display_search_replace )
+                        lined_print, framed_print, confirm_from_input )
 
 class IFL(ABC):
     def __init__(self, config):
@@ -61,7 +60,7 @@ class IFL(ABC):
             })
 
             ## 模拟 function call 的结果
-            file_content = readfile_with_linenumber(infile, True)
+            file_content = readfile_with_linenumber(infile, False)
             call_result = {
                 'role' : 'tool',
                 'tool_call_id': callid,
@@ -75,7 +74,7 @@ class IFL(ABC):
 
     def chat_loop(self, allMessages):
         self.current_round += 1
-        print_line(f"Calling LLM (round {self.current_round})")
+        lined_print(f"Calling LLM (round {self.current_round})")
 
         if self.current_round > self.max_rounds:
             print(f"Maximum rounds {self.max_rounds} reached, exiting")
@@ -92,10 +91,10 @@ class IFL(ABC):
 
         ## 显示LLM响应消息
         if thinking is not None and thinking.strip() != "":
-            framed_print("思考", thinking, "info")
+            framed_print("Thinking", thinking, "info")
 
         if talking is not None and talking.strip() != "":
-            framed_print("回答", talking, "info")
+            framed_print("Answer", talking, "info")
 
         ## 如果没有工具调用
         if fcall is None:
@@ -138,7 +137,7 @@ class IFL(ABC):
             file_name = arguments["file_name"]
 
         except Exception as e:
-            framed_print("ModifyFile 解析出错!", f'{e}\nRetrying...', "warning")
+            framed_print("ModifyFile error", f'{e}\nRetrying...', "warning")
             response = f"parse tool error : {str(e)}"
             call_result = {
                 'role' : 'tool',
@@ -149,7 +148,7 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        framed_print("调用 Tool (ModifyFile)", display_search_replace(blocks), "success")
+        framed_print("Tool (ModifyFile)", blocks, "success")
 
         confirm = confirm_from_input(f"Confirm modification of {file_name}? (y/n)")
         if confirm == True:
@@ -160,7 +159,7 @@ class IFL(ABC):
             else:
                 response = self.config["ChangeFailedTemplate"]
                 response = response.replace("{__USER_RESPOSNE__}", msg)
-                framed_print("ModifyFile 执行出错!", f'{msg}', "warning")
+                framed_print("ModifyFile error", f'{msg}', "warning")
 
             call_result = {
                 'role' : 'tool',
@@ -192,7 +191,7 @@ class IFL(ABC):
             file_name = arguments['file_name']
 
         except Exception as e:
-            framed_print("Writefile 解析出错!", f'{e}\nRetrying...', "warning")
+            framed_print("Writefile error", f'{e}\nRetrying...', "warning")
             response = f"Parse tool call error: {str(e)}"
             call_result = {
                 'role' : 'tool',
@@ -203,7 +202,7 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        framed_print("Tool (WriteFile)", file_content, "success")
+        framed_print(f"Tool (WriteFile):{file_name}", file_content, "success")
 
         confirm = confirm_from_input(f"Confirm writing file {file_name}? (y/n)")
         if confirm == True:
@@ -238,7 +237,7 @@ class IFL(ABC):
             arguments = json.loads(arguments)
             file_name = arguments["file_name"]
         except Exception as e:
-            framed_print("Readfile 解析出错!", f'{e}\nRetrying...', "warning")
+            framed_print("Readfile error", f'{e}\nRetrying...', "warning")
 
             response = f"parse tool error : {str(e)}"
             call_result = {
@@ -250,14 +249,14 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        framed_print("Tool (ReadFile)", f"文件名：{file_name}", "success")
+        framed_print(f"Tool (ReadFile):{file_name}", f"", "success")
 
         # 确保文件存在
         if not os.path.exists(file_name):
             print(f"Cannot open file: {file_name}, exiting")
             sys.exit(0)
 
-        response = readfile_with_linenumber(file_name, True)
+        response = readfile_with_linenumber(file_name, False)
         call_result = {
             'role' : 'tool',
             'tool_call_id': callid,

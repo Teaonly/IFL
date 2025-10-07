@@ -9,7 +9,8 @@ Model:
   
   SiFlow:
     import: "IFL.provider.siflow"
-    model_name: "moonshotai/Kimi-K2-Instruct-0905"
+    ##model_name: "moonshotai/Kimi-K2-Instruct-0905"
+    model_name: "Qwen/Qwen3-Coder-480B-A35B-Instruct"
     base_url: "https://api.siliconflow.cn/v1"
     api_key: SF_API_KEY
 
@@ -29,7 +30,7 @@ SystemPrompt: |+
     For example, if the user asks you how to approach something, you should do your best to answer their question first, and not immediately jump into taking actions.
 
   ## ReadFile tool
-  You can read a single file using this tool, and the ReadFile tool will return the file full content with line number.
+  You can read a single file using this tool, and the ReadFile tool will return the file full content.
 
   ## WriteFile tool
   You can write code / document / response or anything into a new file. Write the content into the target file, don't include any line number.
@@ -91,7 +92,7 @@ AllTools:
   - type: "function"
     function:
       name: "ReadFile"
-      description: "Reading file, return text content of file. Note: file content always include line number + '\t'."
+      description: "Reading file, return text content of file."
       strict: true
       parameters:
         type: "object"

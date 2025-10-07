@@ -43,9 +43,7 @@ def confirm_from_input(info, byExit = True):
 
     return result
 
-def print_line(info, color="ansigreen"):
-    print("\n")
-    print_formatted_text(HTML(f'<{color}>{"-"*20}{info}{"-"*20}</{color}>'))
+
 
 def printed_length(s):
     length = 0
@@ -54,9 +52,21 @@ def printed_length(s):
         if width > 0:  # Exclude zero-width characters
             length += width
     return length
+
+def lined_print(info ):
+    terminal_width = shutil.get_terminal_size().columns
+    info_len = printed_length(info)
+    dash_count = (terminal_width - info_len - 2) // 2
+    line = f"{'─' * dash_count} {info} {'─' * dash_count}"
+    # Adjust for odd terminal width to ensure full width line
+    if printed_length(line) < terminal_width:
+        line += '─'
+    print("\n\n")
     
+    print(f"\033[90m{line}\033[0m")
+
 def framed_print(title, content, style="default"):
-    """Print content in a styled frame, allowing overflow beyond terminal height"""
+    """Print content in a styled frame, wrapping long lines instead of truncating"""
     lines = content.split('\n')
     frame_width = shutil.get_terminal_size().columns
 
@@ -72,34 +82,52 @@ def framed_print(title, content, style="default"):
     color = colors.get(style, colors["default"])
 
     # Draw top border with title
-    top_border_with_title = f"┌───── {title} "  
+    top_border_with_title = f"┌───── {title} "
     top_border_with_title += "─" * (frame_width - printed_length(top_border_with_title) - 1)
     top_border_with_title += "┐"
 
     # Print frame
     print(f"{color['frame']}{''.join(top_border_with_title)}{color['reset']}")
 
-    # Print content lines
+    # Print content lines with wrapping
+    display_width = frame_width - 4  # 2 spaces on each side
+
     for line in lines:
-        # Truncate line if it's too long based on display width
-        display_width = frame_width - 4  # 2 spaces on each side
+        if line.strip() == "":
+            # Empty line - just print spaces
+            print(f"{color['frame']}│ {' ' * display_width} │{color['reset']}")
+            continue
 
-        # Calculate actual display width and truncate accordingly
-        current_width = 0
-        truncated_line = ""
-        for char in line:
-            char_width = wcwidth.wcwidth(char)
-            if current_width + char_width <= display_width:
-                truncated_line += char
-                current_width += char_width
-            else:
-                break
+        # Wrap long lines
+        current_pos = 0
+        while current_pos < len(line):
+            wrapped_line = ""
+            current_width = 0
+            start_pos = current_pos
 
-        while current_width < display_width:
-            truncated_line += " "
-            current_width += 1
+            # Build wrapped line character by character
+            while current_pos < len(line):
+                char = line[current_pos]
+                char_width = wcwidth.wcwidth(char)
 
-        print(f"{color['frame']}│ {truncated_line} │{color['reset']}")
+                if current_width + char_width <= display_width:
+                    wrapped_line += char
+                    current_width += char_width
+                    current_pos += 1
+                else:
+                    break
+
+            # If we didn't add any characters (shouldn't happen), advance by 1
+            if current_pos == start_pos:
+                wrapped_line = line[current_pos]
+                current_pos += 1
+
+            # Pad with spaces to fill the line
+            while current_width < display_width:
+                wrapped_line += " "
+                current_width += 1
+
+            print(f"{color['frame']}│ {wrapped_line} │{color['reset']}")
 
     # Print bottom border
     print(f"{color['frame']}└" + "─" * (frame_width - 2) + f"┘{color['reset']}")
@@ -187,35 +215,6 @@ def do_search_replace(original, blocks):
         i = replace_end + 1
 
     return True, ''.join(original_lines)
-
-def display_search_replace(blocks):
-    """彩色方式显示 SEARCH/REPLACE 块"""
-    lines = blocks.splitlines(keepends=True)
-    output_lines = []
-    in_search = False
-    in_replace = False
-
-    for line in lines:
-        if line.startswith("<<<<<<< SEARCH"):
-            output_lines.append(f"\033[91m{line.rstrip()}\033[0m")  # 红色
-            in_search = True
-            in_replace = False
-        elif line.startswith("======="):
-            output_lines.append(f"\033[93m{line.rstrip()}\033[0m")  # 黄色
-            in_search = False
-            in_replace = True
-        elif line.startswith(">>>>>>> REPLACE"):
-            output_lines.append(f"\033[92m{line.rstrip()}\033[0m")  # 绿色
-            in_search = False
-            in_replace = False
-        elif in_search:
-            output_lines.append(f"\033[91m-{line.rstrip()}\033[0m")  # 红色删除线
-        elif in_replace:
-            output_lines.append(f"\033[92m+{line.rstrip()}\033[0m")  # 绿色添加线
-        else:
-            output_lines.append(line.rstrip())
-
-    return '\n'.join(output_lines)
 
 def apply_patch(file_path, blocks):
     ## 将 search_replace 应用到 file_path 指定的文件中

@@ -30,7 +30,6 @@ pip install -e .
    ```bash
    ifl -t "把 utils.py 里的所有 print 改为 loguru logger" -i utils.py
    ```
-   注意ifl也可以换成 sxz 命令。
 
 
 3. 运行示例（读取多个文件后生成新文件）：
