@@ -36,4 +36,12 @@ ifl                                  # 交互模式
 
 写盘前询问；建议在 Git 仓库内使用。
 
+## 运行截图
+
+![案例1](assets/case1.png)
+
+![案例2](assets/case2.png)
+
+![案例3](assets/case3.png)
+
 MIT
