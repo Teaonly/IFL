@@ -36,7 +36,7 @@ class IFL(ABC):
             }
         ]
 
-        ## 自动加载输入文件内容
+        ## 预加载输入文件内容
         for infile in inputs:
             if not os.path.exists(infile):
                 raise Exception(f"Cannot open file: {infile}")
@@ -119,6 +119,10 @@ class IFL(ABC):
                     'content': response
                 })
                 return self.chat_loop(allMessages)
+            
+        ## 列文件
+        if fcall["function"]["name"] == "ModifyFile":
+            return self.handle_list_file(fcall, new_message, allMessages)
 
         ## 修改文件
         if fcall["function"]["name"] == "ModifyFile":
@@ -131,6 +135,22 @@ class IFL(ABC):
         ## 读取文件
         if fcall["function"]["name"] == "ReadFile":
             return self.handle_read_file(fcall, new_message, allMessages)
+
+        ## 不支持的工具，重新进行调用
+        framed_print("Unsupported tool", f'{fcall}\nRetrying...', "warning")
+        response = f"Error: unsupported tool: {fcall["function"]["name"]}"
+        call_result = {
+            'role' : 'tool',
+            'tool_call_id': fcall["id"],
+            'content': response
+        }
+        allMessages.append(new_message)
+        allMessages.append(call_result)
+        return self.chat_loop(allMessages)
+
+    def handle_list_file(self, fcall, new_message, allMessages):
+        ## TODO
+        pass
 
     def handle_modify_file(self, fcall, new_message, allMessages):
         try:

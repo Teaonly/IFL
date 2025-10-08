@@ -29,6 +29,9 @@ SystemPrompt: |+
   - Not surprising the user with actions you take without asking
     For example, if the user asks you how to approach something, you should do your best to answer their question first, and not immediately jump into taking actions.
 
+  ## ListFile tool
+  You can list current folder's files and sub folders' info, this tool is based 'tree' command.
+
   ## ReadFile tool
   You can read a single file using this tool, and the ReadFile tool will return the file full content.
   Sometimes user will give some code snippet using this tool implicitly.
@@ -92,6 +95,11 @@ ChangeFailedTemplate: |+
 AllTools:
   - type: "function"
     function:
+      name: "ListFile"
+      description: "List contents of current directory in a tree-like format."
+      strict: true
+  - type: "function"
+    function:
       name: "ReadFile"
       description: "Reading file, return text content of file."
       strict: true
@@ -136,4 +144,4 @@ AllTools:
             type: "string"
         required:
           - "modify_blocks"
-          - "file_name"          
+          - "file_name" 
