@@ -281,6 +281,7 @@ def get_args_from_command():
     parser = argparse.ArgumentParser(description="ifl(I'm Feeling Lucky) - Command line coding agent")
     parser.add_argument('-i', '--inputs', nargs='*', default=[], help='Input files')
     parser.add_argument('-t', '--task', type=str, help='Task description')
+    parser.add_argument('-ti', '--task_input', type=str, help='Task description from text file')
     parser.add_argument('-m', '--model', type=str, help='Model provider (SiFlow/GLM)')
     parser.add_argument('-y', '--yes', action='store_true', help='Default yes to all confirmations')
 
@@ -319,6 +320,15 @@ def main():
 
         if args.task and args.task.strip() != "":
             task = args.task
+        elif args.task_input and args.task_input.strip() != "":
+            if not os.path.exists(args.task_input):
+                print(f"Task input file not found: {args.task_input}")
+                sys.exit(1)
+            with open(args.task_input, 'r', encoding='utf-8') as f:
+                task = f.read()
+            if task.strip() == "":
+                print("Task description from file cannot be empty")
+                sys.exit(1)
         else:
             task = content_from_input("Enter your programing task: ")
             if task.strip() == "":
