@@ -81,6 +81,9 @@ SystemPrompt: |+
   ## Code style:
   - IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked
 
+PreloadTemplate: |+
+  This tools is called implicitly, preload context about task.
+
 RefuseTemplate: |+
   I'm sorry, user has refuse to modify or create files.
   Response: {__USER_RESPOSNE__}

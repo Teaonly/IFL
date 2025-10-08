@@ -24,7 +24,7 @@ class IFL(ABC):
         self.auto_yes = auto_yes
 
     ## 钳工操作，意味着精细、半自动操作
-    def fitter(self, task, inputs):
+    def fitter(self, task, preload_files, preload_dir = False):
         ## 初始消息队列
         allMessages = [
             {
@@ -37,11 +37,36 @@ class IFL(ABC):
             }
         ]
 
+        if preload_dir == True:
+            ## 模拟工具调用实现预加载目录列表
+            callid = str(uuid.uuid4())[:6]
+            fcall = {
+                "type": "function",
+                "id":  callid,
+                "function": {
+                    "name": "ListFile",
+                    "arguments" : ""
+                }
+            }
+            allMessages.append({
+                'role': "assistant",
+                'content': self.config["PreloadTemplate"],
+                'tool_calls': [fcall]
+            })
+            result = subprocess.run(['tree', '--gitignore'], capture_output=True, text=True)
+            file_list = result.stdout if result.returncode == 0 else result.stderr
+            call_result = {
+                'role' : 'tool',
+                'tool_call_id': callid,
+                'content': file_list
+            }
+            allMessages.append(call_result)
+
         ## 预加载输入文件内容
-        for infile in inputs:
+        for infile in preload_files:
             if not os.path.exists(infile):
                 raise Exception(f"Cannot open file: {infile}")
-            
+
             # 检查文件是否在当前目录或其子目录内
             abs_infile = os.path.abspath(infile)
             abs_cwd = os.path.abspath(os.getcwd())
@@ -63,7 +88,7 @@ class IFL(ABC):
             ## 模拟一次 function call 的 assistant 的消息
             allMessages.append({
                 'role': "assistant",
-                'content': None,
+                'content': self.config["PreloadTemplate"],
                 'tool_calls': [fcall]
             })
 
@@ -126,7 +151,7 @@ class IFL(ABC):
                     'content': response
                 })
                 return self.chat_loop(allMessages)
-            
+
         ## 列文件
         if fcall["function"]["name"] == "ListFile":
             return self.handle_list_file(fcall, new_message, allMessages)
@@ -338,6 +363,7 @@ def get_args_from_command():
     parser.add_argument('-ti', '--task_input', type=str, help='Task description from text file')
     parser.add_argument('-m', '--model', type=str, help='Model provider (SiFlow/GLM)')
     parser.add_argument('-y', '--yes', action='store_true', help='Default yes to all confirmations')
+    parser.add_argument('-l', '--list', action='store_true', help='Preload current directory file list')
 
     args = parser.parse_args()
     return args
@@ -389,7 +415,8 @@ def main():
                 print("Task description cannot be empty")
                 sys.exit(0)
 
-        agent.fitter(task, args.inputs)
+        inputs = args.inputs.copy()
+        agent.fitter(task, inputs, args.list)
     except KeyboardInterrupt:
         print("\nProgram interrupted by user, exiting...")
         sys.exit(0)
