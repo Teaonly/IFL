@@ -3,6 +3,7 @@ import sys
 import json
 import uuid
 import signal
+import subprocess
 
 from abc import ABC
 import yaml
@@ -40,6 +41,12 @@ class IFL(ABC):
         for infile in inputs:
             if not os.path.exists(infile):
                 raise Exception(f"Cannot open file: {infile}")
+            
+            # 检查文件是否在当前目录或其子目录内
+            abs_infile = os.path.abspath(infile)
+            abs_cwd = os.path.abspath(os.getcwd())
+            if not abs_infile.startswith(abs_cwd):
+                raise Exception(f"File must be within current directory: {infile}")
 
             argument = {
                 "file_name" : infile
@@ -121,7 +128,7 @@ class IFL(ABC):
                 return self.chat_loop(allMessages)
             
         ## 列文件
-        if fcall["function"]["name"] == "ModifyFile":
+        if fcall["function"]["name"] == "ListFile":
             return self.handle_list_file(fcall, new_message, allMessages)
 
         ## 修改文件
@@ -149,8 +156,35 @@ class IFL(ABC):
         return self.chat_loop(allMessages)
 
     def handle_list_file(self, fcall, new_message, allMessages):
-        ## TODO
-        pass
+        framed_print(f"Tool (ListFile)", "", "success")
+        if not self.auto_yes:
+            confirm = confirm_from_input(f"Confirm list current folder ? (y/n)")
+        else:
+            confirm = True
+
+        if confirm == True:
+            result = subprocess.run(['tree', '--gitignore'], capture_output=True, text=True)
+            response = result.stdout if result.returncode == 0 else result.stderr
+            call_result = {
+                'role' : 'tool',
+                'tool_call_id': fcall["id"],
+                'content': response
+            }
+            allMessages.append(new_message)
+            allMessages.append(call_result)
+            return self.chat_loop(allMessages)
+
+        ## 用户输入反馈，继续下一轮次调用
+        response = content_from_input("Enter feedback: ")
+        response = self.config["RefuseTemplate"].replace("{__USER_RESPOSNE__}", response)
+        call_result = {
+            'role' : 'tool',
+            'tool_call_id': fcall["id"],
+            'content': response
+        }
+        allMessages.append(new_message)
+        allMessages.append(call_result)
+        return self.chat_loop(allMessages)
 
     def handle_modify_file(self, fcall, new_message, allMessages):
         try:
