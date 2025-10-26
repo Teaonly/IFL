@@ -361,7 +361,7 @@ def get_args_from_command():
     parser.add_argument('-i', '--inputs', nargs='*', default=[], help='Input files')
     parser.add_argument('-t', '--task', type=str, help='Task description')
     parser.add_argument('-ti', '--task_input', type=str, help='Task description from text file')
-    parser.add_argument('-m', '--model', type=str, help='Model provider (SiFlow/GLM)')
+    parser.add_argument('-m', '--model', type=str, help='Model provider (SiFlow/GLM/AliYun)')
     parser.add_argument('-y', '--yes', action='store_true', help='Default yes to all confirmations')
     parser.add_argument('-l', '--list', action='store_true', help='Preload current directory file list')
     parser.add_argument('-s', '--settings', type=str, help='Path to config.yaml file')
@@ -382,13 +382,13 @@ def main():
 
         ## Load configuration file
         args = get_args_from_command()
-        
+
         if args.settings:
             lore_path = args.settings
         else:
             code_path = os.path.dirname( os.path.abspath(__file__) )
             lore_path = os.path.join(code_path, "config.yaml")
-            
+
         with open(lore_path, "r") as file:
             config = yaml.safe_load(file)
 
