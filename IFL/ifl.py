@@ -23,9 +23,9 @@ class IFL(ABC):
         self.llm = create_provider(config)
         self.auto_yes = auto_yes
 
-    ## 钳工操作，意味着精细、半自动操作
+    ## Fitter operation, meaning precise, semi-automatic operation
     def fitter(self, task, preload_files, preload_dir = False):
-        ## 初始消息队列
+        ## Initial message queue
         allMessages = [
             {
                 'role': "system",
@@ -38,7 +38,7 @@ class IFL(ABC):
         ]
 
         if preload_dir == True:
-            ## 模拟工具调用实现预加载目录列表
+            ## Simulate tool call to preload directory list
             callid = str(uuid.uuid4())[:6]
             fcall = {
                 "type": "function",
@@ -62,12 +62,12 @@ class IFL(ABC):
             }
             allMessages.append(call_result)
 
-        ## 预加载输入文件内容
+            ## Preload input file content
         for infile in preload_files:
             if not os.path.exists(infile):
                 raise Exception(f"Cannot open file: {infile}")
 
-            # 检查文件是否在当前目录或其子目录内
+            # Check if file is within current directory or its subdirectories
             abs_infile = os.path.abspath(infile)
             abs_cwd = os.path.abspath(os.getcwd())
             if not abs_infile.startswith(abs_cwd):
@@ -85,14 +85,14 @@ class IFL(ABC):
                     "arguments": json.dumps(argument)
                 }
             }
-            ## 模拟一次 function call 的 assistant 的消息
+            ## Simulate an assistant message for a function call
             allMessages.append({
                 'role': "assistant",
                 'content': self.config["PreloadTemplate"],
                 'tool_calls': [fcall]
             })
 
-            ## 模拟 function call 的结果
+            ## Simulate the result of a function call
             file_content = readfile_with_linenumber(infile, False)
             call_result = {
                 'role' : 'tool',
@@ -101,7 +101,7 @@ class IFL(ABC):
             }
             allMessages.append(call_result)
 
-        ## 消息已经准备完成
+        ## Messages are ready
         self.chat_loop(allMessages)
 
 
@@ -122,14 +122,14 @@ class IFL(ABC):
             'tool_calls': [fcall] if fcall is not None else None
         }
 
-        ## 显示LLM响应消息
+        ## Display LLM response messages
         if thinking is not None and thinking.strip() != "":
             framed_print("Thinking", thinking, "info")
 
         if talking is not None and talking.strip() != "":
             framed_print("Answer", talking, "info")
 
-        ## 如果没有工具调用
+        ## If no tool call
         if fcall is None:
             if not self.auto_yes:
                 confirm = confirm_from_input(f"Model did not invoke tool call, exit? (y/n)", False)
@@ -152,23 +152,23 @@ class IFL(ABC):
                 })
                 return self.chat_loop(allMessages)
 
-        ## 列文件
+        ## List files
         if fcall["function"]["name"] == "ListFile":
             return self.handle_list_file(fcall, new_message, allMessages)
 
-        ## 修改文件
+        ## Modify file
         if fcall["function"]["name"] == "ModifyFile":
             return self.handle_modify_file(fcall, new_message, allMessages)
 
-        ## 输出文件
+        ## Write file
         if fcall["function"]["name"] == "WriteFile":
             return self.handle_write_file(fcall, new_message, allMessages)
 
-        ## 读取文件
+        ## Read file
         if fcall["function"]["name"] == "ReadFile":
             return self.handle_read_file(fcall, new_message, allMessages)
 
-        ## 不支持的工具，重新进行调用
+        ## Unsupported tool, make another call
         framed_print("Unsupported tool", f'{fcall}\nRetrying...', "warning")
         response = f"Error: unsupported tool: {fcall["function"]["name"]}"
         call_result = {
@@ -199,7 +199,7 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        ## 用户输入反馈，继续下一轮次调用
+        ## User input feedback, continue next round call
         response = content_from_input("Enter feedback: ")
         response = self.config["RefuseTemplate"].replace("{__USER_RESPOSNE__}", response)
         call_result = {
@@ -238,7 +238,7 @@ class IFL(ABC):
         else:
             confirm = True
         if confirm == True:
-            ## 根据获得 path/diff 字符串，修改目标文件
+            ## Modify target file based on obtained path/diff string
             success, msg = apply_patch(file_name, blocks)
             if success :
                 response = self.config["AcceptTemplate"]
@@ -256,7 +256,7 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        ## 用户输入反馈，继续下一轮次调用
+        ## User input feedback, continue next round call
         response = content_from_input("Enter feedback: ")
         response = self.config["RefuseTemplate"].replace("{__USER_RESPOSNE__}", response)
         call_result = {
@@ -307,7 +307,7 @@ class IFL(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
-        ## 用户输入反馈，继续下一轮次调用
+        ## User input feedback, continue next round call
         response = content_from_input("Enter feedback: ")
         response = self.config["RefuseTemplate"].replace("{__USER_RESPOSNE__}", response)
         call_result = {
@@ -340,7 +340,7 @@ class IFL(ABC):
 
         framed_print(f"Tool (ReadFile):{file_name}", f"", "success")
 
-        # 确保文件存在
+        # Ensure file exists
         if not os.path.exists(file_name):
             print(f"Cannot open file: {file_name}, exiting")
             sys.exit(0)
@@ -356,7 +356,7 @@ class IFL(ABC):
         return self.chat_loop(allMessages)
 
 def get_args_from_command():
-    ## 解析命令行参数
+    ## Parse command line arguments
     parser = argparse.ArgumentParser(description="ifl(I'm Feeling Lucky) - Command line coding agent")
     parser.add_argument('-i', '--inputs', nargs='*', default=[], help='Input files')
     parser.add_argument('-t', '--task', type=str, help='Task description')
@@ -376,10 +376,10 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
 
     try:
-        ## 加载环境变量
+        ## Load environment variables
         load_dotenv()
 
-        ## 加载配置文件
+        ## Load configuration file
         code_path = os.path.dirname( os.path.abspath(__file__) )
         lore_path = os.path.join(code_path, "config.yaml")
         with open(lore_path, "r") as file:
@@ -387,7 +387,7 @@ def main():
 
         args = get_args_from_command()
 
-        ## 如果指定了模型供应商，更新配置
+        ## If a model provider is specified, update the configuration
         if args.model:
             if args.model in config["Model"] :
                 config["Model"]["selected"] = args.model
