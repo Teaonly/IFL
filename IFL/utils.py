@@ -24,7 +24,7 @@ def confirm_from_input(info, byExit = True):
     style = Style.from_dict({
         "frame.border": "#884444",
     })
-    # 根据 byExit 参数动态构建选项列表
+    # Dynamically build option list based on byExit parameter
     options = [
         (True,  "Yes"),
         (False, "No"),
@@ -143,31 +143,163 @@ def readfile_with_linenumber(file_path, with_number=True):
 
     return ''.join(result)
 
-def find_similar_lines(search_lines, content_lines, threshold=0.85):
-    '''
-    search_lines = search_lines.splitlines()
-    content_lines = content_lines.splitlines()
-    '''
-    best_ratio = 0
-    best_match = []
+def normalize_line(line):
+    """Normalize single line text, remove extra spaces and unify indentation"""
+    # Remove leading and trailing whitespace
+    normalized = line.strip()
+    # Merge multiple internal spaces into single space
+    normalized = ' '.join(normalized.split())
+    return normalized
+
+def preprocess_lines(lines, preserve_structure=True):
+    """Preprocess line list, provide different levels of normalization"""
+    if preserve_structure:
+        # Preserve structure, only normalize whitespace characters
+        return [line.rstrip() for line in lines]
+    else:
+        # Fully normalize, ignore whitespace and case differences
+        return [normalize_line(line).lower() for line in lines if line.strip()]
+
+def calculate_similarity(search_lines, content_chunk, strategy='combined'):
+    """Calculate similarity using multiple strategies"""
+    if len(search_lines) != len(content_chunk):
+        return 0.0
+
+    # Strategy 1: Original SequenceMatcher
+    if strategy == 'original':
+        return SequenceMatcher(None, search_lines, content_chunk).ratio()
+
+    # Strategy 2: Fully normalized comparison
+    elif strategy == 'normalized':
+        norm_search = preprocess_lines(search_lines, preserve_structure=False)
+        norm_content = preprocess_lines(content_chunk, preserve_structure=False)
+        if not norm_search or not norm_content:  # Handle empty line cases
+            return SequenceMatcher(None, search_lines, content_chunk).ratio()
+        return SequenceMatcher(None, norm_search, norm_content).ratio()
+
+    # Strategy 3: Structured comparison (preserve whitespace)
+    elif strategy == 'structured':
+        struct_search = preprocess_lines(search_lines, preserve_structure=True)
+        struct_content = preprocess_lines(content_chunk, preserve_structure=True)
+        return SequenceMatcher(None, struct_search, struct_content).ratio()
+
+    # Strategy 4: Combined comparison
+    elif strategy == 'combined':
+        original_score = SequenceMatcher(None, search_lines, content_chunk).ratio()
+        normalized_score = SequenceMatcher(
+            None,
+            preprocess_lines(search_lines, preserve_structure=False),
+            preprocess_lines(content_chunk, preserve_structure=False)
+        ).ratio()
+        structured_score = SequenceMatcher(
+            None,
+            preprocess_lines(search_lines, preserve_structure=True),
+            preprocess_lines(content_chunk, preserve_structure=True)
+        ).ratio()
+
+        # Weighted average: Original 0.4, Normalized 0.4, Structured 0.2
+        return original_score * 0.4 + normalized_score * 0.4 + structured_score * 0.2
+
+    else:
+        return SequenceMatcher(None, search_lines, content_chunk).ratio()
+
+def find_similar_lines(search_lines, content_lines, threshold=0.90, strategy='combined'):
+    """
+    Enhanced similar line finding function
+
+    Args:
+        search_lines: List of lines to search for
+        content_lines: List of lines to search in
+        threshold: Similarity threshold (0.0-1.0)
+        strategy: Matching strategy ('original', 'normalized', 'structured', 'combined')
+
+    Returns:
+        tuple: (index, matched_lines, similarity_score, details)
+        index: Match position, -1 means not found
+        matched_lines: List of matched lines
+        similarity_score: Actual similarity score
+        details: Match details dictionary
+    """
+    # Input validation
+    if not search_lines or not content_lines:
+        return -1, [], 0.0, {"error": "Empty input lines"}
 
     if len(search_lines) > len(content_lines):
-        return -1, "Context line out of range"
+        return -1, [], 0.0, {"error": "Search lines longer than content lines"}
 
+    best_match = {
+        'index': -1,
+        'lines': [],
+        'score': 0.0,
+        'strategy_used': strategy,
+        'details': {}
+    }
+
+    # Iterate through all possible match positions
     for i in range(len(content_lines) - len(search_lines) + 1):
-        chunk = content_lines[i : i + len(search_lines)]
-        ratio = SequenceMatcher(None, search_lines, chunk).ratio()
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best_match = chunk
-            best_match_i = i
+        chunk = content_lines[i:i + len(search_lines)]
 
-    ## 如果相似度低于阈值，返回 -1 表示未找到
-    if best_ratio < threshold:
-        return -1, "Cannot find matching context in original file"
+        # Calculate similarity
+        similarity = calculate_similarity(search_lines, chunk, strategy)
 
-    ## 如果首尾行相同，直接返回完整匹配
-    return best_match_i, best_match
+        # If a better match is found
+        if similarity > best_match['score']:
+            best_match.update({
+                'index': i,
+                'lines': chunk,
+                'score': similarity,
+                'details': {
+                    'chunk_start': i,
+                    'chunk_end': i + len(search_lines) - 1,
+                    'line_count': len(search_lines)
+                }
+            })
+
+    # Check if threshold requirement is met
+    if best_match['score'] >= threshold:
+        return best_match['index'], best_match['lines'], best_match['score'], best_match['details']
+    else:
+        # Try other strategies as fallback
+        fallback_strategies = ['original', 'normalized', 'structured']
+        for fallback_strategy in fallback_strategies:
+            if fallback_strategy == strategy:
+                continue
+
+            fallback_match = {
+                'index': -1,
+                'lines': [],
+                'score': 0.0,
+                'strategy_used': fallback_strategy
+            }
+
+            for i in range(len(content_lines) - len(search_lines) + 1):
+                chunk = content_lines[i:i + len(search_lines)]
+                similarity = calculate_similarity(search_lines, chunk, fallback_strategy)
+
+                if similarity > fallback_match['score']:
+                    fallback_match.update({
+                        'index': i,
+                        'lines': chunk,
+                        'score': similarity,
+                        'details': {
+                            'chunk_start': i,
+                            'chunk_end': i + len(search_lines) - 1,
+                            'line_count': len(search_lines),
+                            'fallback_strategy': True
+                        }
+                    })
+
+            if fallback_match['score'] >= threshold * 0.8:  # Fallback strategy uses slightly lower threshold
+                return fallback_match['index'], fallback_match['lines'], fallback_match['score'], fallback_match['details']
+
+        # No match found with any strategy
+        return -1, [], best_match['score'], {
+            "error": f"Cannot find matching context in original file. Best score: {best_match['score']:.3f}",
+            "best_match_index": best_match['index'],
+            "best_score": best_match['score'],
+            "strategy_used": strategy,
+            "threshold": threshold
+        }
 
 def find_next(lines, start_index, target):
     for i in range(start_index, len(lines)):
@@ -185,7 +317,7 @@ def do_search_replace(original, blocks):
         if search_start == -1:
             return False, "Malformed block: missing <<<<<<< SEARCH"
 
-        # 找到 SEARCH 块的起始位置
+        # Find the starting position of the SEARCH block
         search_start = search_start + 1
         search_end = find_next(blocks_lines, search_start, "=======")
         if search_end == -1:
@@ -199,12 +331,15 @@ def do_search_replace(original, blocks):
         search_lines = blocks_lines[search_start:search_end]
         replace_lines = blocks_lines[search_end + 1:replace_end]
 
-        # 在 original 中查找最相似的行
-        match_index, matched_lines = find_similar_lines(search_lines, original_lines)
+        # Find the most similar lines in original
+        match_index, matched_lines, similarity_score, details = find_similar_lines(
+            search_lines, original_lines, strategy='combined'
+        )
         if match_index == -1:
-            return False, matched_lines  # 返回错误消息
+            error_msg = details.get("error", "Cannot find matching context in original file")
+            return False, error_msg  # Return error message
 
-        # 执行替换，跳过已处理的块
+        # Perform replacement, skip processed blocks
         original_lines = (
             original_lines[:match_index] +
             replace_lines +
@@ -213,16 +348,15 @@ def do_search_replace(original, blocks):
         i = replace_end + 1
 
     return True, ''.join(original_lines)
-
 def apply_patch(file_path, blocks):
-    ## 将 search_replace 应用到 file_path 指定的文件中
+    ## Apply search_replace to the file specified by file_path
     with open(file_path, 'r', encoding='utf-8') as file:
         original = file.read()
 
     success, result = do_search_replace(original, blocks)
 
     if success:
-        # 写入修改后的内容
+        # Write the modified content
         try:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.write(result)
@@ -230,5 +364,6 @@ def apply_patch(file_path, blocks):
         except Exception as e:
             return False, f"Failed to write file {file_path}: {str(e)}"
 
-    ## result 表示错误消息
+    ## result represents the error message
     return False, result
+

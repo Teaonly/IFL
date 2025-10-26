@@ -1,6 +1,6 @@
 ## 'selected' is target LLM provider.
 Model:
-  selected: SiFlow 
+  selected: AliYun
   GLM:
     import: "IFL.provider.bigmodel"
     model_name: "glm-4.5"
@@ -13,6 +13,12 @@ Model:
     ##model_name: "Qwen/Qwen3-Coder-480B-A35B-Instruct"
     base_url: "https://api.siliconflow.cn/v1"
     api_key: SF_API_KEY
+  
+  AliYun:
+    import: "IFL.provider.aliyun"
+    model_name: "qwen3-coder-plus"
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    api_key: ALIYUN_API_KEY
 
 MaxRounds: 10
 
@@ -101,6 +107,10 @@ AllTools:
       name: "ListFile"
       description: "List contents of current directory in a tree-like format."
       strict: true
+      parameters:
+        type: "object"
+        properties: {}
+        required: []
   - type: "function"
     function:
       name: "ReadFile"
