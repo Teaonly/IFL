@@ -12,7 +12,7 @@ def main():
     code_path = os.path.dirname( os.path.abspath(__file__) )
     lore_path = os.path.join(code_path, "../IFL/config.yaml")
     with open(lore_path, "r") as file:
-        config = yaml.safe_load(file)    
+        config = yaml.safe_load(file)
 
     llm = create_provider(config)
 
@@ -38,7 +38,7 @@ def main():
             "role": "system",
             "content": "You are a helpful assistant that helps people find information."
         }]
-    
+
     ## 第一轮测试，直接问答
     print("== 第一轮测试，直接问答 ==")
     messages.append({
@@ -61,7 +61,7 @@ def main():
     for thinking, answer, fcall in response:
         if thinking:
             print("思考: ", thinking)
-        if answer:  
+        if answer:
             print("回答: ", answer)
         if fcall:
             print("函数调用: ", fcall)
@@ -80,6 +80,12 @@ def main():
 
     print("== 第四轮测试，验证工具 ==")
     if(fcall and fcall['function'].get("name") == "GetCurrentTime"):
+        ## 将之前的 fcall 增加到 messages队列中。
+        messages.append({
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [fcall]
+        })
         messages.append({
             "role": "tool",
             "tool_call_id": fcall.get("id"),
@@ -92,9 +98,9 @@ def main():
         print("\n\n")
 
     else:
-        print("没有触发工具调用，测试失败！")
+        print(f"没有触发工具调用，测试失败！{fcall}")
 
     print("== 测试结束 ==")
-    
+
 if __name__ == "__main__":
     main()
