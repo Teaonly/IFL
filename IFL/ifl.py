@@ -364,6 +364,7 @@ def get_args_from_command():
     parser.add_argument('-m', '--model', type=str, help='Model provider (SiFlow/GLM)')
     parser.add_argument('-y', '--yes', action='store_true', help='Default yes to all confirmations')
     parser.add_argument('-l', '--list', action='store_true', help='Preload current directory file list')
+    parser.add_argument('-s', '--settings', type=str, help='Path to config.yaml file')
 
     args = parser.parse_args()
     return args
@@ -380,12 +381,16 @@ def main():
         load_dotenv()
 
         ## Load configuration file
-        code_path = os.path.dirname( os.path.abspath(__file__) )
-        lore_path = os.path.join(code_path, "config.yaml")
+        args = get_args_from_command()
+        
+        if args.settings:
+            lore_path = args.settings
+        else:
+            code_path = os.path.dirname( os.path.abspath(__file__) )
+            lore_path = os.path.join(code_path, "config.yaml")
+            
         with open(lore_path, "r") as file:
             config = yaml.safe_load(file)
-
-        args = get_args_from_command()
 
         ## If a model provider is specified, update the configuration
         if args.model:
